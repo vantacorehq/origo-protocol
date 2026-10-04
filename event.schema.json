@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://origo.example/schemas/event.schema.json",
+  "title": "Origo Event v0.1",
+  "description": "Signed product lifecycle event. Semantically compatible with GS1 EPCIS 2.0.",
+  "type": "object",
+  "required": ["id", "type", "actor", "time", "inputs", "outputs", "signature"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^ev:[0-9a-f]{64}$", "description": "ev: + SHA-256 of the canonical (JCS) event body" },
+    "type": { "enum": ["Extraction", "Transformation", "Transfer", "Aggregation", "Disaggregation", "Attestation", "Recall"] },
+    "actor": { "type": "string", "pattern": "^did:", "description": "DID of the signing participant" },
+    "time": { "type": "string", "format": "date-time" },
+    "process": { "type": ["string", "null"], "description": "Process class from the process registry (smelting, fab, assembly...)" },
+    "location": {
+      "type": "object",
+      "properties": {
+        "gln": { "type": "string", "description": "GS1 Global Location Number" },
+        "geohash": { "type": "string", "description": "Optional, coarse precision for privacy" }
+      }
+    },
+    "inputs": { "type": "array", "items": { "$ref": "#/$defs/lot" } },
+    "outputs": { "type": "array", "items": { "$ref": "#/$defs/lot" } },
+    "evidence": {
+      "type": "array",
+      "description": "Hashes of external evidence: certificates, photos, sensor data, lab reports",
+      "items": {
+        "type": "object",
+        "required": ["kind", "digest"],
+        "properties": {
+          "kind": { "enum": ["certificate", "sensor", "lab", "customs", "photo", "other"] },
+          "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+          "uri": { "type": "string" }
+        }
+      }
+    },
+    "claims": {
+      "type": "array",
+      "description": "Claims; may be backed by a ZK proof when values are confidential",
+      "items": { "type": "object", "required": ["name"], "properties": { "name": { "type": "string" }, "zk": { "type": "string" } } }
+    },
+    "signature": { "type": "string", "description": "Ed25519 signature over the bytes of the id field (hex)" }
+  },
+  "$defs": {
+    "lot": {
+      "type": "object",
+      "required": ["id", "qty", "unit"],
+      "properties": {
+        "id": { "type": "string", "description": "Lot/unit ID: lot:..., sgtin:..., sscc:..." },
+        "qty": { "type": "number", "exclusiveMinimum": 0 },
+        "unit": { "type": "string", "description": "UCUM code: kg, t, m3, 1 (pieces)" }
+      }
+    }
+  }
+}
